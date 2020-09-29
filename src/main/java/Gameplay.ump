@@ -1,0 +1,223 @@
+namespace ca.mcgill.ecse223.kingdomino.model;
+
+class Gameplay {
+	
+	depend ca.mcgill.ecse223.kingdomino.KingdominoApplication;
+	depend ca.mcgill.ecse223.kingdomino.controller.Controller;
+	
+	gamestatus {
+		
+		Initializing {
+			
+			CreatingFirstDraft {
+				entry/{shuffleDominoPile(); createNextDraft(); orderNextDraft();}
+
+				draftReady -> /{ generateInitialPlayerOrder(); resetCurrentPlayer();} Initializing.SelectingFirstDomino;
+
+			}
+			
+			SelectingFirstDomino {
+				selectionComplete [!isCurrentPlayerTheLastInTurn()] -> /{updateCurrentPlayer();} Initializing.SelectingFirstDomino;
+				selectionComplete [isCurrentPlayerTheLastInTurn()] -> /{revealNextDraft();} InProcess.PlacingDomino;
+			}
+			
+		}
+		
+		InProcess {
+			
+			CreatingNextDraft {
+				entry / {createNextDraft(); orderNextDraft();}
+				draftReady -> /{revealNextDraft(); resetCurrentPlayer();} InProcess.PlacingDomino;
+			}
+			
+			PlacingDomino {
+				exit / {updateScoresAndRankings();}
+				placementComplete -> InProcess.SelectingDomino;
+			}
+			
+			SelectingDomino {
+				selectionComplete [!isCurrentPlayerTheLastInTurn()] -> /{updateCurrentPlayer();} PlacingDomino;
+				selectionComplete [isCurrentPlayerTheLastInTurn() && !isCurrentTurnTheLastInGame()] -> CreatingNextDraft;
+				selectionComplete [isCurrentPlayerTheLastInTurn() && isCurrentTurnTheLastInGame()] -> /{resetCurrentPlayer();} Ending.PlacingLastDomino;
+			}
+			
+		}
+		
+		Ending {
+					
+			PlacingLastDomino {
+				exit / {updateScoresAndRankings();}
+				placementComplete [!isCurrentPlayerTheLastInTurn()] -> /{updateCurrentPlayer();} PlacingLastDomino;
+				placementComplete [isCurrentPlayerTheLastInTurn()] -> ShowingResults;
+			}
+			
+			ShowingResults {
+				
+			}
+		}
+	}
+	
+	/*
+	 * Setter for test setup
+	 */
+	
+	public void setGamestatus(String status){
+		 switch (status) {
+		case "CreatingFirstDraft":
+			gamestatus = Gamestatus.Initializing;
+			gamestatusInitializing = GamestatusInitializing.CreatingFirstDraft;
+			break;
+		case "SelectingFirstDomino":
+			gamestatus = Gamestatus.Initializing;
+			gamestatusInitializing = GamestatusInitializing.SelectingFirstDomino;
+			break;
+		case "SelectingDomino":
+			gamestatus = Gamestatus.InProcess;
+			gamestatusInProcess = GamestatusInProcess.SelectingDomino;
+			gamestatusInitializing = GamestatusInitializing.Null;
+			break;
+		case "DiscardingDomino":
+			gamestatus = Gamestatus.InProcess;
+			gamestatusInProcess = GamestatusInProcess.PlacingDomino;
+			gamestatusInitializing = GamestatusInitializing.Null;
+			break;
+		case "DiscardingLastDomino":
+			gamestatus = Gamestatus.Ending;
+			gamestatusEnding = GamestatusEnding.PlacingLastDomino;
+			gamestatusInitializing = GamestatusInitializing.Null;
+			break;
+		case "PlacingDomino":
+			gamestatus = Gamestatus.InProcess;
+			gamestatusInProcess = GamestatusInProcess.PlacingDomino;
+			gamestatusInitializing = GamestatusInitializing.Null;
+			break;
+		case "PlacingLastDomino":
+			gamestatus = Gamestatus.Ending;
+			gamestatusEnding = GamestatusEnding.PlacingLastDomino;
+			gamestatusInitializing = GamestatusInitializing.Null;
+			break;
+		
+		// TODO add further cases here to set desired state
+		default:
+			throw new RuntimeException("Invalid gamestatus string was provided: " + status);
+		}
+    
+	}
+	
+	/**
+	 * Guards
+	 */
+	
+	// TODO JavaDoc
+	/**
+	  * 
+	  * @return boolean
+	  */
+	public boolean isCurrentPlayerTheLastInTurn() {
+		Game currentGame = KingdominoApplication.getKingdomino().getCurrentGame();
+    	/*if(currentGame.getCurrentDraft().getIdSortedDomino(currentGame.getNumberOfPlayers() - 1).getDominoSelection() != null) {
+    		return currentGame.getCurrentDraft().getIdSortedDomino(currentGame.getNumberOfPlayers() - 1)
+				.getDominoSelection().getPlayer().equals(currentGame.getNextPlayer());
+   	 	}
+		if(currentGame.getNextDraft().getIdSortedDomino(currentGame.getNumberOfPlayers() - 1).getDominoSelection() != null) {
+    		return currentGame.getNextDraft().getIdSortedDomino(currentGame.getNumberOfPlayers() - 1)
+				.getDominoSelection().getPlayer().equals(currentGame.getNextPlayer());
+   	 	}
+   	 	return false;*/
+	   return currentGame.getPlayer(currentGame.getNumberOfPlayers() - 1) == currentGame.getNextPlayer();
+  }
+	
+	// TODO JavaDoc
+	/**
+	  * 
+	  * @return boolean
+	  */
+	public boolean isCurrentTurnTheLastInGame() {
+		return KingdominoApplication.getKingdomino().getCurrentGame().getNextDraft() == null;
+	}
+
+	/**
+	 * You may need to add more guards here Actions
+	 */
+	
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void shuffleDominoPile() {
+		Controller.shuffleDominoes(KingdominoApplication.getKingdomino().getCurrentGame().getAllDominos());
+	}
+	
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void generateInitialPlayerOrder() {
+		// implemented in Controller.startGame()
+	}
+
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void createNextDraft() {
+	 Game currentGame = KingdominoApplication.getKingdomino().getCurrentGame();
+		Controller.CreateNextDraft(currentGame.getAllDominos());
+	}
+
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void orderNextDraft() {
+		Controller.OrderDraft(KingdominoApplication.getKingdomino().getCurrentGame().getNextDraft());
+		draftReady();
+	}
+
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void revealNextDraft() {
+		Controller.RevealDraft(KingdominoApplication.getKingdomino().getCurrentGame().getNextDraft());
+	}
+
+	/**
+	 * You may need to add more actions here
+	 */
+	 
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void updateScoresAndRankings() {
+		Controller.CalculateRanking();
+	}
+	
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void resetCurrentPlayer() {
+		Game currentGame = KingdominoApplication.getKingdomino().getCurrentGame();
+		currentGame.setNextPlayer(currentGame.getPlayer(0));
+	}
+	
+	// TODO JavaDoc
+	/**
+	  * 
+	  */
+	public void updateCurrentPlayer() {
+	    Game currentGame = KingdominoApplication.getKingdomino().getCurrentGame();
+    
+    	int index = currentGame.getPlayers().indexOf(currentGame.getNextPlayer()) + 1;
+    
+		if(currentGame.getNextPlayer() == null || index >= currentGame.getNumberOfPlayers()) {
+			currentGame.setNextPlayer(currentGame.getPlayer(0));
+			
+		}
+		else currentGame.setNextPlayer(currentGame.getPlayer(index));
+		
+   }
+	
+}

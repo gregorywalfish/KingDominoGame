@@ -1,0 +1,14 @@
+namespace ca.mcgill.ecse223.kingdomino.controller;
+
+class TODominoInKingdom {
+	depend ca.mcgill.ecse223.kingdomino.view.*;
+	
+	enum DirectionKind {Up, Down, Left, Right};
+	
+	DirectionKind direction = DirectionKind.Up;
+	
+	Integer x;
+	Integer y;
+	Integer id;
+	
+}

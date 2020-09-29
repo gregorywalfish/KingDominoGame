@@ -1,0 +1,114 @@
+namespace ca.mcgill.ecse223.kingdomino.model;
+
+use ca.mcgill.ecse223.kingdomino.model.TerrainType;
+use Gameplay.ump;
+
+class Kingdomino {
+	1 <@>- * User users;	
+	1 <@>- * BonusOption bonusOptions;
+	1 <@>- * Game allGames;
+	0..1 -> 0..1 Game currentGame;
+}
+
+class Game {
+	int numberOfPlayers = 4;
+	immutable int maxPileSize;
+	1 -- 0..1 Gameplay gameplay;
+	1 <@>- 0..4 Player players;
+	1 <@>- 0..* Domino allDominos; // sorted by Ids of dominos
+	1 <@>- 0..* Draft allDrafts; // sorted by Ids of dominos
+	0..1 -> 0..1 Player nextPlayer;
+	0..1 -> 0..1 Draft currentDraft;
+	0..1 -> 0..1 Draft nextDraft;
+	0..1 -> 0..1 Domino topDominoInPile;	
+	0..1 -> * BonusOption selectedBonusOptions;
+}
+
+// Players, users
+
+class User {
+	unique String name;
+	int playedGames = 0;
+	int wonGames = 0;
+	0..1 -- * Player playerInGames;
+}
+
+class Player {
+	1 <@>- 0..1 Kingdom kingdom;
+	enum PlayerColor {Blue, Green, Yellow, Pink};
+	lazy PlayerColor color;
+	int currentRanking = 1; 
+	int bonusScore = 0;
+	int propertyScore = 0;
+	int totalScore = Java {bonusScore + propertyScore};
+}
+
+// Dominos, pile, draft 
+class Kingdom {
+	1 <@>- * KingdomTerritory territories;
+	1 <@>- * Property properties;
+}
+
+class Domino {
+	immutable int id;
+	[id >= 1 && id <= 48]
+	immutable TerrainType leftTile;
+	immutable TerrainType rightTile;
+	immutable int leftCrown = 0;
+	immutable int rightCrown;
+	0..1 prevDomino -- 0..1 Domino nextDomino;
+	enum DominoStatus {Excluded, InPile, InNextDraft, InCurrentDraft, CorrectlyPreplaced, ErroneouslyPreplaced, PlacedInKingdom, Discarded};
+	DominoStatus status = DominoStatus.InPile;	
+}
+
+class KingdomTerritory {
+	abstract;
+	// The position defines the coordinates of the left tile of a domino or the castle itself
+	int x;
+	int y;
+	[x > -5 && x < 5]
+	[y > -5 && y < 5]
+}
+
+class DominoInKingdom {
+	isA KingdomTerritory;
+	enum DirectionKind {Up, Down, Left, Right};
+	// Measured wrt. the left tile of the domino
+	DirectionKind direction = DirectionKind.Up;
+	0..1 -> 1 Domino domino;
+}
+
+class Castle {
+	// Castle is placed at position x:0, y:0
+	isA KingdomTerritory;
+	0..1 -> 1 Player player;
+}
+
+// Draft = Next group of dominos available for selection 
+class Draft {
+	enum DraftStatus {FaceDown, Sorted, FaceUp};
+	DraftStatus draftStatus;
+	0..1 -> 0..4 Domino idSortedDominos;
+	1 <@>- 0..4 DominoSelection selections;
+}
+
+// This can also be an association class
+class DominoSelection {
+	// Each player may select at most one domino at a time  
+	0..1 -- 1 Player player; 
+	0..1 -- 1 Domino domino;
+}
+
+// Scoring
+class Property {
+	lazy immutable TerrainType propertyType;
+	0..1 -> * Domino includedDominos;
+	lazy TerrainType leftTile;
+	int score = 0;
+	int size = 0;
+	int crowns = 0;
+}
+
+class BonusOption {
+	immutable String optionName; // MiddleKingdom, Harmony
+}
